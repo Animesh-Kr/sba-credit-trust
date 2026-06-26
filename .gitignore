@@ -25,3 +25,7 @@ env/
 
 # private career/PhD strategy — keep local, not public
 docs/MasterPlan_and_Handoff.md
+
+# HF Space deploy-time copies (regenerated from src/ + models/)
+hf_space/src/
+hf_space/models/
