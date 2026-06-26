@@ -1,0 +1,24 @@
+# Data & artifacts (reproducible via Kaggle pull / training)
+data/
+models/
+mlruns/
+reports/figures/
+reports/*.html
+*.parquet
+*.pkl
+*.onnx
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+*.egg-info/
+.venv/
+env/
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/

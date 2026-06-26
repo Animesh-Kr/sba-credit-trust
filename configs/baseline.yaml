@@ -1,0 +1,6 @@
+# Baseline modelling configuration (Phase A)
+models: [logistic_regression, xgboost]
+threshold: 0.5
+ece_bins: 15
+quantify_leakage: true          # also report the inflated metric from oversample-before-split
+report_path: reports/baseline_metrics.md

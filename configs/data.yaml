@@ -1,0 +1,15 @@
+# Data + split configuration (Phase A)
+raw_csv: data/SBAnational.csv
+include_disbursement: false      # exclude post-decision disbursement cols from primary features
+seed: 42
+
+split:
+  stratified:
+    test_size: 0.2
+  temporal:
+    cutoff_year: 2006           # train <= 2006, test > 2006 (spans the 2008 crisis)
+
+target:
+  raw_column: MIS_Status
+  default_value: CHGOFF         # positive / event class
+  paid_value: "P I F"
