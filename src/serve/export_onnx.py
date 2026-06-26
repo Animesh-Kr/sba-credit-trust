@@ -105,8 +105,8 @@ def _write(b, size_kb, max_diff, parity_ok, sk_ms, ox_ms, n):
     L.append("## Model artefact\n")
     L.append(f"- Test PR-AUC **{m.get('test_pr_auc'):.4f}**, ROC-AUC {m.get('test_roc_auc'):.4f}, "
              f"ECE {m.get('test_ece'):.4f}, Brier {m.get('test_brier'):.4f}.")
-    L.append(f"- Temperature T = {m.get('temperature'):.3f}. Conformal thresholds: "
-             f"{ {a: {k: round(v,3) for k,v in t.items()} for a,t in b.conformal.items()} }.\n")
+    L.append(f"- Isotonic-calibrated; per-loan policy (reject ≥ {m.get('reject_threshold',0.5):.0%}). "
+             f"Decision validation: {m.get('decision_validation')}.\n")
     L.append("## ONNX export + latency\n")
     L.append(f"- ONNX model size: **{size_kb:.0f} KB**.")
     L.append(f"- Parity (raw prob, n={n:,}): max|Δ| = **{max_diff:.2e}** "

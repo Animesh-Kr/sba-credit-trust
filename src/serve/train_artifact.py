@@ -10,12 +10,13 @@ import time
 import numpy as np
 from sklearn.pipeline import Pipeline
 
-from ..calibration.scaling import TemperatureScaler, logit
-from ..conformal.selective import SelectiveRiskController
+from ..calibration.scaling import IsotonicCalibrator
 from ..data import clean, schema, split
 from ..eval import metrics
 from ..models.baselines import build_preprocessor
 from .bundle import DEFAULT_PATH, ServingBundle
+
+REJECT_THRESHOLD = 0.5  # auto-reject loans more likely than not to default
 
 # best hyperparameters from the Optuna search (reports/tuning_metrics.md, E-3)
 TUNED = dict(n_estimators=700, max_depth=8, learning_rate=0.05116500998797686,
@@ -48,44 +49,49 @@ def run(raw_csv, seed=42, nrows=None, path=DEFAULT_PATH):
     ])
     pipe.fit(X.iloc[tr], y.iloc[tr])
 
-    # temperature calibration on the calibration slice
-    p_cal_raw = pipe.predict_proba(X.iloc[cal])[:, 1]
-    ts = TemperatureScaler().fit(logit(p_cal_raw), y.iloc[cal].to_numpy())
+    # isotonic calibration on the calibration slice (well-calibrated probabilities for per-loan
+    # decisions; far better than temperature on scale_pos_weight'd scores — see AUDIT/Phase C)
+    iso = IsotonicCalibrator().fit(pipe.predict_proba(X.iloc[cal])[:, 1], y.iloc[cal].to_numpy())
 
-    # conformal thresholds (apply temperature first) for two risk targets
-    p_cal = ts.transform(logit(p_cal_raw))
-    conformal = {}
+    # held-out test metrics (calibrated) + per-loan decision validation
+    p_te = np.asarray(iso.transform(pipe.predict_proba(X.iloc[te])[:, 1]))
+    yte = y.iloc[te].to_numpy()
+    rep = metrics.classification_report(yte, p_te)
+    validation = {}
     for alpha in (0.05, 0.10):
-        c = SelectiveRiskController(alpha=alpha, delta=0.05).fit(p_cal, y.iloc[cal].to_numpy())
-        conformal[alpha] = {"t_lo": c.t_lo, "t_hi": c.t_hi}
-
-    # held-out test metrics for the model card / app footer
-    p_te = ts.transform(logit(pipe.predict_proba(X.iloc[te])[:, 1]))
-    rep = metrics.classification_report(y.iloc[te].to_numpy(), p_te)
+        appr = p_te <= alpha
+        rej = p_te >= REJECT_THRESHOLD
+        validation[alpha] = {
+            "approve_rate": float(appr.mean()),
+            "default_among_approved": float(yte[appr].mean()) if appr.any() else float("nan"),
+            "reject_rate": float(rej.mean()),
+            "refer_rate": float((~appr & ~rej).mean()),
+        }
 
     numeric = schema.NUMERIC_FEATURES + schema.ENGINEERED_NUMERIC
     categorical = schema.CATEGORICAL_FEATURES
     bundle = ServingBundle(
         pipeline=pipe,
-        temperature=ts.T_,
-        conformal=conformal,
+        calibrator=iso,
+        reject_threshold=REJECT_THRESHOLD,
+        alphas=[0.05, 0.10],
         numeric_cols=numeric,
         categorical_cols=categorical,
         choices=_build_choices(X.iloc[tr], categorical),
         numeric_defaults={c: float(np.nanmedian(X[c].astype(float))) for c in numeric},
         metadata={
-            "model": "XGBoost (Optuna-tuned) + temperature calibration + conformal selection",
+            "model": "XGBoost (Optuna-tuned) + isotonic calibration + per-loan decision",
             "test_pr_auc": rep["pr_auc"], "test_roc_auc": rep["roc_auc"],
             "test_ece": rep["ece"], "test_brier": rep["brier"],
-            "prevalence": float(y.mean()), "temperature": ts.T_,
+            "prevalence": float(y.mean()), "reject_threshold": REJECT_THRESHOLD,
+            "decision_validation": validation,
             "n_train": int(len(tr)), "n_test": int(len(te)),
             "disclaimer": "Research/education only. Not a real lending decision system.",
         },
     )
     out = bundle.save(path)
-    print(f"[artifact] saved {out}  ({time.time()-t0:.1f}s)  "
-          f"PR-AUC={rep['pr_auc']:.4f} ECE={rep['ece']:.4f} T={ts.T_:.3f}")
-    print(f"[artifact] conformal: {conformal}")
+    print(f"[artifact] saved {out}  ({time.time()-t0:.1f}s)  PR-AUC={rep['pr_auc']:.4f} ECE={rep['ece']:.4f}")
+    print(f"[artifact] per-loan validation: {validation}")
     return out
 
 

@@ -51,8 +51,10 @@ def main():
 
     with st.sidebar:
         st.header("Risk target")
-        alpha = st.selectbox("Max default rate among auto-approved (α)", list(b.conformal.keys()),
+        alpha = st.selectbox("Auto-approve only if default risk ≤ (α)", b.alphas,
                              format_func=lambda a: f"{a:.0%}")
+        st.caption(f"Auto-reject if default risk ≥ {b.metadata.get('reject_threshold', 0.5):.0%}; "
+                   "refer the rest to a human.")
         st.markdown("---")
         st.metric("Model PR-AUC (test)", f"{m.get('test_pr_auc', float('nan')):.3f}")
         st.metric("Calibration ECE (test)", f"{m.get('test_ece', float('nan')):.3f}")
@@ -100,13 +102,14 @@ def main():
         st.markdown("---")
         cols = st.columns(2)
         cols[0].metric("Calibrated P(default)", f"{prob:.1%}")
-        color = {"auto-approve": "🟢", "auto-reject": "🔴", "abstain / refer": "🟡"}[decision]
+        color = {"auto-approve": "🟢", "auto-reject": "🔴", "refer to human": "🟡"}[decision]
         cols[1].metric("Decision", f"{color} {decision}")
-        if decision == "abstain / refer":
-            st.info("The model is not confident enough to auto-decide at this risk target — refer to "
-                    "a human underwriter.")
-        st.caption(f"At α={alpha:.0%}, auto-approved loans are calibrated to default at ≤ {alpha:.0%} "
-                   "(in-distribution; see temporal-shift caveat in the model card).")
+        if decision == "refer to human":
+            st.info("Default risk is above the auto-approve target but below the auto-reject line — "
+                    "refer to a human underwriter.")
+        st.caption(f"Per-loan policy: auto-approve if risk ≤ {alpha:.0%}, auto-reject if ≥ "
+                   f"{b.metadata.get('reject_threshold',0.5):.0%}. Probabilities are isotonic-calibrated "
+                   "in-distribution (degrade under temporal shift — see the model card).")
 
         st.subheader("Why — top drivers (SHAP)")
         for name, val in _shap_local(b, X):

@@ -100,10 +100,18 @@
 
 ## Deployment (Phase E)
 
-- **Served model:** Optuna-tuned XGBoost + temperature calibration (T≈0.96) + conformal
-  approve/reject thresholds, persisted as a single `ServingBundle` (`models/serving_bundle.joblib`).
-- **Validated served behaviour (held-out test):** at α=0.05, auto-approves 85.6% of loans with a
-  realised **4.9%** default rate among approved; at α=0.10, 4.8% approved-rate threshold holds too.
+- **Served model:** Optuna-tuned XGBoost + **isotonic calibration** + **per-loan** decision
+  thresholds, persisted as a single `ServingBundle` (`models/serving_bundle.joblib`). Isotonic
+  (test ECE **0.001**) is used in serving because temperature scaling left the `scale_pos_weight`'d
+  scores poorly calibrated at the high end.
+- **Decision policy (deployment):** auto-approve if calibrated P(default) ≤ α; auto-reject if
+  ≥ 0.5; else **refer to a human**. This is a *per-loan* rule — intentionally stricter than the
+  conformal *marginal* risk guarantee (a research result, which controls only the average risk
+  among approved and can admit a few moderate-risk loans). For a tool a human inspects, per-loan
+  decisions are the honest choice.
+- **Validated served behaviour (held-out test):** at α=0.05 — auto-approve 71.5% at a realised
+  **0.65%** default rate among approved, auto-reject 17% (88% of those are true defaults), refer
+  11.5%. At α=0.10 — approve 76.2% at 1.07% default.
 - **Streamlit app** (`src/app/streamlit_app.py`): per-loan calibrated probability + auto-approve /
   auto-reject / **refer-to-human** decision + SHAP explanation.
 - **ONNX:** the gradient-boosted model is exported to ONNX (preprocessing kept in the serving layer);
