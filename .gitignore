@@ -22,3 +22,6 @@ env/
 .DS_Store
 .vscode/
 .idea/
+
+# private career/PhD strategy — keep local, not public
+docs/MasterPlan_and_Handoff.md
