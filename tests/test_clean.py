@@ -1,7 +1,6 @@
 """Tests for cleaning + feature engineering + target derivation."""
 import numpy as np
 import pandas as pd
-
 from src.data import clean, schema
 
 

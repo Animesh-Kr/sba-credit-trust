@@ -1,5 +1,6 @@
 """Tests for the trustworthy-ML layer: calibration, uncertainty/OOD, conformal selection."""
 import numpy as np
+from src.models.uncertainty import MahalanobisOOD, predictive_entropy
 
 from src.calibration.scaling import IsotonicCalibrator, TemperatureScaler, logit
 from src.conformal.selective import (
@@ -8,7 +9,6 @@ from src.conformal.selective import (
     clopper_pearson_upper,
 )
 from src.eval.metrics import expected_calibration_error
-from src.models.uncertainty import MahalanobisOOD, predictive_entropy
 
 
 # --- calibration ---

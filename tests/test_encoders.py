@@ -1,7 +1,6 @@
 """Tests for leakage-safe encoders."""
 import numpy as np
 import pandas as pd
-
 from src.data import encoders
 
 
@@ -37,7 +36,6 @@ def test_numeric_standardizer_fit_on_train_only():
 
 def test_tabular_encoder_shapes_and_cardinalities():
     import pandas as pd
-
     from src.data import clean
 
     raw = pd.DataFrame(

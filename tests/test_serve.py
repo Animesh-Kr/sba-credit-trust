@@ -3,10 +3,10 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
-
-from src.calibration.scaling import IsotonicCalibrator
 from src.data import clean, schema
 from src.models.baselines import build_preprocessor
+
+from src.calibration.scaling import IsotonicCalibrator
 from src.serve.bundle import ServingBundle
 
 

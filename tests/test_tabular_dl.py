@@ -1,7 +1,6 @@
 """Smoke tests for the DL models + focal loss (forward + one optimisation step)."""
 import numpy as np
 import torch
-
 from src.models import tabular_dl
 
 

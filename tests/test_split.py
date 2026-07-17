@@ -1,7 +1,6 @@
 """Tests for leakage-safe splitting."""
 import numpy as np
 import pandas as pd
-
 from src.data import split
 
 
